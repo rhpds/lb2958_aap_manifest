@@ -30,7 +30,6 @@
 
 - name: Inject AAP2 Controller manifest
   ansible.controller.license:
-  # awx.awx.license:
     manifest: /tmp/aap-manifest.zip
     controller_host: "{{ lb2958_aap_manifest_aap_hostname }}"
     controller_username: "{{ lb2958_aap_manifest_aap_username }}"
