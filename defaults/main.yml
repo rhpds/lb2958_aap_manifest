@@ -1,8 +1,8 @@
 ---
 lb2958_aap_manifest_url: https://<CHANGEME>
-lb2958_aap_manifest:
-  username: <CHANGEME>
-  password: <CHANGEME>
+# lb2958_aap_manifest:
+#   username: <CHANGEME>
+#   password: <CHANGEME>
 
 lb2958_aap_manifest_aap_hostname: "{{ automation_controller_hostname }}"
 lb2958_aap_manifest_aap_username: admin
