@@ -1,5 +1,5 @@
 ---
-# Playbook to apply AAP manifest and optionally deploy Lightspeed
+# Playbook to apply AAP manifest and deploy Lightspeed
 - name: Apply AAP Manifest and Deploy Lightspeed
   hosts: localhost
   gather_facts: false
