@@ -9,6 +9,10 @@ This Ansible role uploads an AAP 2.6 manifest to an existing AAP installation an
 - An existing AAP installation on OpenShift
 - Access to the AAP manifest file
 - Proper OpenShift credentials with access to the AAP namespace
+- Install required collections:
+  ```bash
+  ansible-galaxy collection install -r requirements.yml
+  ```
 
 ## Usage
 

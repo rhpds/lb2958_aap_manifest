@@ -1,6 +1,6 @@
 galaxy_info:
   author: Mitesh The Mouse <mitsharm@redhat.com>
-  description: Upload AAP2.6 manifest
+  description: Upload AAP 2.5 manifest and Configure Ansible Lightspeed
   company: Red Hat
   license: GPLv3
   min_ansible_version: "2.1"

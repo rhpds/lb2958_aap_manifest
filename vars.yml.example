@@ -7,16 +7,16 @@ lb2958_aap_manifest_aap_password: <CHANGEME>
 # AAP custom resource
 aap_name: aap
 aap_namespace: aap  # Namespace where AAP is deployed
+require_valid_certs: false
 
 # Only needed if you have a custom admin password k8s secret
 #aap_admin_password_secret: custom-admin-password
 
 # Lightspeed Chatbot
 lightspeed_chatbot_url: https://granite3-1-8b-wisdom-model-staging.apps.stage2-west.v2dz.p1.openshiftapps.com/v1
-aap_name: myaap
-aap_namespace: chadams
-deploy_lightspeed: true
-require_valid_certs: false
+
+# (Optional)Specify Chatbot API Key as an ansible var instead of an env var
+# lightspeed_chatbot_token: <CHANGEME>
 
 # Set to true to hide sensitive information in logs
 hide_secrets: true
