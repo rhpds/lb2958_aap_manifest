@@ -1,9 +1,14 @@
 ---
-lb2958_aap_manifest_url: https://<CHANGEME>
-# lb2958_aap_manifest:
-#   username: <CHANGEME>
-#   password: <CHANGEME>
+# AAP Manifest can be provided either as a URL or a local file path
+# Option 1: URL to download the manifest
+lb2958_aap_manifest_url: https://placeholder
+
+# Option 2: Local path to the manifest file
+# lb2958_aap_manifest_local_path: /path/to/aap-manifest.zip
 
 lb2958_aap_manifest_aap_hostname: "{{ automation_controller_hostname }}"
 lb2958_aap_manifest_aap_username: admin
-lb2958_aap_manifest_aap_password: <CHANGEME>
+lb2958_aap_manifest_aap_password: placeholder
+
+# Enable Lightspeed deployment after AAP manifest has been applied
+deploy_lightspeed: false

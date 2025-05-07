@@ -1,0 +1,8 @@
+---
+# Playbook to apply AAP manifest and optionally deploy Lightspeed
+- name: Apply AAP Manifest and Deploy Lightspeed
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Include tasks from main.yml
+      ansible.builtin.include_tasks: tasks/main.yml

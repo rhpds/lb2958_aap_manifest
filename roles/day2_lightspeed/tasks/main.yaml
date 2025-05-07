@@ -1,0 +1,3 @@
+---
+- name: Deploy Lightspeed as a Day2 Operation
+  ansible.builtin.include_tasks: lightspeed.yaml
