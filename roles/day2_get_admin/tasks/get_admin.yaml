@@ -1,0 +1,8 @@
+---
+- name: Get AAP admin secret
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: secret
+    name: "{{ aap_admin_password_secret | default(aap_name + '-admin-password') }}"
+    namespace: "{{ aap_namespace }}"
+  register: aap_admin_secret

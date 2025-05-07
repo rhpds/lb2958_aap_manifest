@@ -1,0 +1,3 @@
+---
+- name: Get admin secret
+  ansible.builtin.include_tasks: get_admin.yaml

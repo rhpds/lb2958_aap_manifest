@@ -1,0 +1,169 @@
+---
+# Purpose: Deploy Lightspeed as a Day 2 operation
+# 1. Create OAuth2 Application and store the client_id and client_secret in a variable
+# 2. Create the lightspeed secrets using the auth_config_secret.yaml.j2 and model_config_secret.yaml.j2 templates, and store the secret names in variables
+# 3. Patch the AAP CR to adopt lightspeed
+# 4. Check that the lightspeed pod is running
+
+# -- Create OAuth2 application in AAP
+- name: Create Lightspeed OAuth2 application
+  ansible.platform.application:
+    gateway_hostname: "{{ aap_hostname }}"
+    gateway_username: "{{ aap_admin_user | default('admin') }}"
+    gateway_password: "{{ aap_admin_secret.resources[0].data.password | b64decode }}"
+    validate_certs: "{{ require_valid_certs | default(true) }}"
+    name: "{{ lightspeed_oauth_app_name }}"
+    organization: "Default"
+    client_type: "confidential"
+    authorization_grant_type: "authorization-code"
+    redirect_uris:
+      - http://temp/
+  register: lightspeed_oauth_result
+  no_log: "{{ hide_secrets }}"
+
+- name: Display Lightspeed OAuth Application Details
+  ansible.builtin.debug:
+    msg: "OAuth App Created: Client ID: {{ lightspeed_oauth_result.client_id }}, Secret: {{ lightspeed_oauth_result.client_secret }}"
+  no_log: "{{ hide_secrets }}"
+
+- name: Store Lightspeed OAuth credentials as a fact
+  ansible.builtin.set_fact:
+    lightspeed_oauth_client_id: "{{ lightspeed_oauth_result.client_id }}"
+    lightspeed_oauth_client_secret: "{{ lightspeed_oauth_result.client_secret }}"
+  no_log: "{{ hide_secrets }}"
+
+- name: Create auth and chatbot secrets for Lightspeed
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ aap_namespace }}"
+    definition: "{{ lookup('template', 'secrets/' + item + '.j2') }}"
+  loop:
+    - lightspeed_auth_config_secret.yaml
+    - lightspeed_chatbot_config_secret.yaml
+
+- name: Create model config secret for Lightspeed if WCA is enabled
+  kubernetes.core.k8s:
+    state: present
+    namespace: "{{ aap_namespace }}"
+    definition: "{{ lookup('template', 'secrets/lightspeed_model_config_secret.yaml.j2') }}"
+  when:
+    - lightspeed_wca_enabled | bool
+    - lightspeed_model_url is defined and lightspeed_model_url | length > 0
+    - lightspeed_model_api_key is defined and lightspeed_model_api_key | length > 0
+    - lightspeed_model_id is defined and lightspeed_model_id | length > 0
+
+- name: Inject Lightspeed into AAP with WCA enabled
+  kubernetes.core.k8s:
+    merge_type: ["merge"]
+    definition:
+      apiVersion: '{{ api_version }}'
+      kind: AnsibleAutomationPlatform
+      metadata:
+        name: '{{ aap_name }}'
+        namespace: '{{ aap_namespace }}'
+      spec:
+        lightspeed:
+          disabled: false
+          image_pull_policy: Always
+          model_config_secret_name: '{{ lightspeed_model_config_secret_name }}'
+          auth_config_secret_name: '{{ lightspeed_auth_config_secret_name }}'
+          chatbot_config_secret_name: '{{ lightspeed_chatbot_config_secret_name }}'
+  when:
+    - lightspeed_wca_enabled | bool
+    - lightspeed_model_url is defined and lightspeed_model_url | length > 0
+    - lightspeed_model_api_key is defined and lightspeed_model_api_key | length > 0
+    - lightspeed_model_id is defined and lightspeed_model_id | length > 0
+
+- name: Inject Lightspeed into AAP without WCA
+  kubernetes.core.k8s:
+    merge_type: ["merge"]
+    definition:
+      apiVersion: '{{ api_version }}'
+      kind: AnsibleAutomationPlatform
+      metadata:
+        name: '{{ aap_name }}'
+        namespace: '{{ aap_namespace }}'
+      spec:
+        lightspeed:
+          disabled: false
+          image_pull_policy: Always
+          auth_config_secret_name: '{{ lightspeed_auth_config_secret_name }}'
+          chatbot_config_secret_name: '{{ lightspeed_chatbot_config_secret_name }}'
+  when: not (lightspeed_wca_enabled | bool) or not (lightspeed_model_url is defined and lightspeed_model_url | length > 0 and lightspeed_model_api_key is defined and lightspeed_model_api_key | length > 0 and lightspeed_model_id is defined and lightspeed_model_id | length > 0)
+
+- name: Wait for the AnsibleLightspeed CR to be fully operational
+  kubernetes.core.k8s_info:
+    api_version: lightspeed.ansible.com/v1alpha1
+    kind: AnsibleLightspeed
+    namespace: "{{ aap_namespace }}"
+    name: "{{ lightspeed_name }}"
+  register: ls_cr
+  retries: 60
+  delay: 15
+  until: >
+    ls_cr.resources | length > 0 and
+    ls_cr.resources[0].status is defined and
+    ls_cr.resources[0].status.URL is defined and
+    ls_cr.resources[0].status.URL | length > 0
+
+- name: Extract the OpenShift Route from AnsibleLightspeed status
+  ansible.builtin.set_fact:
+    lightspeed_url: "{{ ls_cr.resources[0].status.URL }}"
+
+- name: Display the AnsibleLightspeed URL
+  ansible.builtin.debug:
+    msg: "AnsibleLightspeed service is ready at: {{ lightspeed_url }}"
+
+# TODO - Temporary workaround
+- name: Scale down Gateway Operator Deployment
+  kubernetes.core.k8s:
+    state: present
+    wait: true
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: "aap-gateway-operator-controller-manager"
+        namespace: "{{ aap_namespace }}"
+      spec:
+        replicas: 0
+
+- name: Patch OAuth2 application in AAP
+  ansible.platform.application:
+    gateway_hostname: "{{ aap_hostname }}"
+    gateway_username: "{{ aap_admin_user | default('admin') }}"
+    gateway_password: "{{ aap_admin_secret.resources[0].data.password | b64decode }}"
+    validate_certs: "{{ require_valid_certs | default(true) }}"
+    name: "{{ lightspeed_oauth_app_name }}"
+    organization: "Default"
+    redirect_uris:
+      - "{{ lightspeed_url }}/complete/aap/"
+
+# TODO - Temporary workaround
+- name: Scale up Gateway Operator Deployment
+  kubernetes.core.k8s:
+    state: present
+    wait: true
+    definition:
+      apiVersion: apps/v1
+      kind: Deployment
+      metadata:
+        name: "aap-gateway-operator-controller-manager"
+        namespace: "{{ aap_namespace }}"
+      spec:
+        replicas: 1
+
+- name: Verify AAP
+  kubernetes.core.k8s:
+    definition:
+      apiVersion: '{{ api_version }}'
+      kind: AnsibleAutomationPlatform
+      metadata:
+        name: '{{ aap_name }}'
+        namespace: '{{ aap_namespace }}'
+    wait: true
+    wait_condition:
+      type: Successful
+      reason: Successful
+      status: "True"
+    wait_timeout: 1200

@@ -1,10 +1,28 @@
 ---
+- name: Check if local manifest file exists
+  ansible.builtin.stat:
+    path: "{{ lb2958_aap_manifest_local_path | default('') }}"
+  register: local_manifest_stat
+  when: lb2958_aap_manifest_local_path is defined
+
+- name: Copy local manifest file
+  ansible.builtin.copy:
+    src: "{{ lb2958_aap_manifest_local_path }}"
+    dest: /tmp/aap-manifest.zip
+    remote_src: true
+  when:
+    - lb2958_aap_manifest_local_path is defined
+    - local_manifest_stat.stat.exists | default(false)
+
 - name: Fetch Automation Controller manifest file
   ansible.builtin.get_url:
     url: "{{ lb2958_aap_manifest_url }}"
     dest: /tmp/aap-manifest.zip
     username: "{{ lb2958_aap_manifest.username | default(omit) }}"
     password: "{{ lb2958_aap_manifest.password | default(omit) }}"
+  when:
+    - lb2958_aap_manifest_local_path is not defined or not local_manifest_stat.stat.exists | default(false)
+    - lb2958_aap_manifest_url is defined
 
 - name: Create AAP Auth token
   ansible.platform.token:
@@ -14,6 +32,7 @@
     gateway_hostname: "{{ lb2958_aap_manifest_aap_hostname }}"
     gateway_username: "{{ lb2958_aap_manifest_aap_username }}"
     gateway_password: "{{ lb2958_aap_manifest_aap_password }}"
+    validate_certs: "{{ require_valid_certs | default(true) }}"
   register: r_aap_token
   until: r_aap_token.failed == false
   retries: 10
@@ -25,7 +44,7 @@
       aap_controller_token: "{{ r_aap_token.ansible_facts.aap_token.token }}"
 
 - name: Save token in var
-  set_fact:
+  ansible.builtin.set_fact:
     _lb2958_aap_manifest_token: "{{ r_aap_token.ansible_facts.aap_token.token }}"
 
 - name: Inject AAP2 Controller manifest
@@ -35,7 +54,7 @@
     controller_username: "{{ lb2958_aap_manifest_aap_username }}"
     controller_oauthtoken: "{{ _lb2958_aap_manifest_token }}"
     controller_password: "{{ lb2958_aap_manifest_aap_password }}"
-    validate_certs: true
+    validate_certs: "{{ require_valid_certs | default(true) }}"
   register: r_aap_license
   until: not r_aap_license.failed
   retries: 30
@@ -46,3 +65,19 @@
     path: /tmp/aap-manifest.zip
     state: absent
 
+# Deploy Lightspeed as a Day 2 operation after AAP manifest has been applied
+- name: Set AAP hostname for Lightspeed configuration
+  ansible.builtin.set_fact:
+    aap_hostname: "{{ lb2958_aap_manifest_aap_hostname }}"
+    aap_admin_user: "{{ lb2958_aap_manifest_aap_username }}"
+    aap_admin_password: "{{ lb2958_aap_manifest_aap_password }}"
+
+- name: Get AAP admin credentials
+  ansible.builtin.import_role:
+    name: day2_get_admin
+  when: deploy_lightspeed | default(false) | bool
+
+- name: Configure AAP Lightspeed
+  ansible.builtin.import_role:
+    name: day2_lightspeed
+  when: deploy_lightspeed | default(false) | bool

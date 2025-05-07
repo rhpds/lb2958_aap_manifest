@@ -1,0 +1,12 @@
+---
+apiVersion: lightspeed.ansible.com/v1alpha1
+kind: AnsibleLightspeed
+metadata:
+  name: "{{ lightspeed_name }}"
+spec:
+{% if lightspeed_wca_enabled | bool and lightspeed_model_url is defined and lightspeed_model_url | length > 0 and lightspeed_model_api_key is defined and lightspeed_model_api_key | length > 0 and lightspeed_model_id is defined and lightspeed_model_id | length > 0 %}
+  model_config_secret_name: "{{ lightspeed_model_config_secret_name }}"
+{% endif %}
+  auth_config_secret_name: "{{ lightspeed_auth_config_secret_name }}"
+  chatbot_config_secret_name: "{{ lightspeed_chatbot_config_secret_name }}"
+  no_log: {{ hide_secrets }}
