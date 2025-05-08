@@ -74,10 +74,10 @@
 
 - name: Get AAP admin credentials
   ansible.builtin.import_role:
-    name: day2_get_admin
+    name: ../roles/day2_get_admin
   when: deploy_lightspeed | default(false) | bool
 
 - name: Configure AAP Lightspeed
   ansible.builtin.import_role:
-    name: day2_lightspeed
+    name: ../roles/day2_lightspeed
   when: deploy_lightspeed | default(false) | bool
