@@ -12,3 +12,26 @@ lb2958_aap_manifest_aap_password: placeholder
 
 # Enable Lightspeed deployment after AAP manifest has been applied
 deploy_lightspeed: false
+
+# AAP Configuration for Lightspeed
+aap_name: aap
+aap_namespace: "{{ lookup('ansible.builtin.env', 'NAMESPACE') | default('aap') }}"
+api_version: 'aap.ansible.com/v1alpha1'
+hide_secrets: false
+require_valid_certs: true
+
+# Lightspeed Configuration
+lightspeed_name: "{{ aap_name }}-lightspeed"
+lightspeed_auth_config_secret_name: "{{ aap_name }}-lightspeed-auth-config"
+lightspeed_oauth_app_name: "{{ aap_name }}-lightspeed-oauth"
+lightspeed_user_name: ibm-user@redhat.com
+lightspeed_chatbot_url: https://granite-model-placeholder
+lightspeed_chatbot_model: granite3-1-8b
+lightspeed_chatbot_token: "{{ lookup('env', 'LIGHTSPEED_CHATBOT_TOKEN') }}"
+lightspeed_chatbot_config_secret_name: "{{ aap_name }}-lightspeed-chatbot-config"
+lightspeed_model_type: wca
+lightspeed_model_id: "{{ lookup('env', 'LIGHTSPEED_MODEL_ID') }}"
+lightspeed_model_url: "{{ lookup('env', 'LIGHTSPEED_MODEL_URL') }}"
+lightspeed_model_api_key: "{{ lookup('env', 'LIGHTSPEED_MODEL_API_KEY') }}"
+lightspeed_model_config_secret_name: "{{ aap_name }}-lightspeed-model-config"
+lightspeed_wca_enabled: "{{ lookup('env', 'LIGHTSPEED_WCA_ENABLED') | default(false) | bool }}"

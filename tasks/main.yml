@@ -73,11 +73,11 @@
     aap_admin_password: "{{ lb2958_aap_manifest_aap_password }}"
 
 - name: Get AAP admin credentials
-  ansible.builtin.import_role:
-    name: ../roles/day2_get_admin
+  ansible.builtin.include_tasks:
+    file: get_admin.yaml
   when: deploy_lightspeed | default(false) | bool
 
 - name: Configure AAP Lightspeed
-  ansible.builtin.import_role:
-    name: ../roles/day2_lightspeed
+  ansible.builtin.include_tasks:
+    file: lightspeed.yaml
   when: deploy_lightspeed | default(false) | bool
